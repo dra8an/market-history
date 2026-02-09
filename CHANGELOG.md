@@ -15,6 +15,12 @@ All notable changes to this project will be documented in this file.
 - `SearchBar` component — debounced autocomplete with keyboard navigation
 - `StockChart` component — Lightweight Charts v5 candlestick + volume histogram
 - `TimeframeSelector` component — daily/weekly/monthly toggle
-- `StockInfo` component — symbol, name, exchange, date range, active/delisted badge
+- `StockInfo` component — symbol, name, exchange, date range, active/delisted badge, day change, all-time return
 - `App.tsx` — full layout wiring all components together
-- Python data pipeline (01-04 + orchestrator) for Stooq download, parsing, yfinance gap-fill, manifest generation
+- Python data pipeline: NASDAQ FTP ticker list download, yfinance batch OHLCV download, manifest generation
+- Resumable pipeline with progress tracking (download_progress.json)
+
+### Changed
+- Replaced Stooq bulk download with NASDAQ FTP + yfinance (Stooq requires CAPTCHA)
+- StockInfo now shows labeled "Day:" change and "All-time:" return instead of unlabeled single change
+- Price display labeled as "(split-adj.)" since Yahoo Finance returns split-adjusted OHLC

@@ -1,22 +1,22 @@
 # Historical US Stock Data Viewer — Implementation Plan
 
 ## Context
-Build a static (no backend) web app that displays historical OHLCV stock data for all US stocks + ETFs (~11,800 tickers), including delisted ones. Data is sourced from Stooq bulk downloads + yfinance gap-filling. The React app lazy-loads per-ticker JSON files on demand.
+Build a static (no backend) web app that displays historical OHLCV stock data for all US stocks + ETFs (~11,800 tickers), including delisted ones. Data is sourced from NASDAQ's public ticker lists + yfinance historical data. The React app lazy-loads per-ticker JSON files on demand.
 
 ## Project Structure
 ```
 market-history-2/
 ├── pipeline/                    # Python data pipeline (runs locally)
 │   ├── requirements.txt         # pandas, yfinance, requests
-│   ├── 01_download_stooq.py     # Download & extract Stooq US daily zip
-│   ├── 02_parse_stooq.py        # Parse CSVs → per-ticker JSON files
-│   ├── 03_fill_gaps_yfinance.py # Supplement missing data via yfinance
+│   ├── 01_download_stooq.py     # Download ticker lists from NASDAQ FTP
+│   ├── 02_parse_stooq.py        # Download OHLCV via yfinance → per-ticker JSON
+│   ├── 03_fill_gaps_yfinance.py # (Legacy, unused)
 │   ├── 04_generate_manifest.py  # Build manifest.json (ticker index)
-│   └── run_pipeline.py          # Orchestrator: runs steps 01-04
+│   └── run_pipeline.py          # Orchestrator: runs steps 01, 02, 04
 ├── public/
 │   └── data/                    # Generated output (gitignored)
-│       ├── manifest.json        # ~500KB ticker index for search
-│       └── tickers/             # ~11,800 JSON files
+│       ├── manifest.json        # ~1.3MB ticker index for search
+│       └── tickers/             # ~11,400 JSON files
 │           ├── AAPL.json
 │           ├── MSFT.json
 │           └── ...
@@ -36,13 +36,12 @@ market-history-2/
 │       ├── SearchBar.tsx         # Autocomplete ticker search
 │       ├── StockChart.tsx        # Lightweight Charts candlestick + volume
 │       ├── TimeframeSelector.tsx # Daily/Weekly/Monthly toggle
-│       └── StockInfo.tsx         # Symbol, name, exchange, date range badge
+│       └── StockInfo.tsx         # Symbol, name, exchange, date range, changes
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
-├── tailwind.config.js
 ├── .gitignore                   # Includes public/data/
-└── README.md
+└── CHANGELOG.md
 ```
 
 ## Implementation Steps
@@ -54,17 +53,15 @@ market-history-2/
 
 ### Step 2: Define TypeScript Types (`src/types/index.ts`)
 ```ts
-// Per-ticker JSON format: compact arrays for small file size
 export interface TickerData {
   symbol: string;
   data: number[][]; // [timestamp, open, high, low, close, volume][]
 }
 
-// Manifest entry (short keys for compact JSON)
 export interface ManifestTicker {
   s: string;    // symbol
   n: string;    // name
-  e: string;    // exchange (NASDAQ, NYSE, NYSEMKT)
+  e: string;    // exchange (NASDAQ, NYSE, NYSEMKT, NYSEARCA)
   from: string; // first date YYYY-MM-DD
   to: string;   // last date YYYY-MM-DD
   a: boolean;   // active (true) or delisted (false)
@@ -102,61 +99,60 @@ export type Timeframe = 'daily' | 'weekly' | 'monthly';
 - Separate volume histogram series on secondary price scale
 - Handles resize via ResizeObserver
 - Updates data when ticker or timeframe changes
-- Formats candlestick data as `{ time: 'YYYY-MM-DD', open, high, low, close }`
 
 **`TimeframeSelector.tsx`**
 - Three buttons: Daily | Weekly | Monthly
 - Active state styling
-- Calls parent callback on change
 
 **`StockInfo.tsx`**
 - Displays: symbol, company name, exchange
-- Date range (e.g., "Dec 1980 — Feb 2026")
+- Date range (e.g., "May 2002 — Feb 2026")
 - Active/Delisted badge (green/red)
-- Current price + change from last close
+- Split-adjusted price with label
+- Day change (last close vs previous close)
+- All-time return (first close vs last close)
 
 **`App.tsx`**
 - Layout: SearchBar at top, StockInfo + TimeframeSelector below, StockChart fills remaining space
 - State: selectedTicker, timeframe
-- Default: show AAPL or empty state with instructions
+- Default: empty state with instructions
 
 ### Step 6: Python Data Pipeline
 
-**`01_download_stooq.py`**
-- Downloads US daily data zip from `https://stooq.com/db/d/?b=d_us_txt`
-- Note: Stooq may require manual CAPTCHA — script will check if file exists and skip if already downloaded
-- Extracts to `pipeline/raw/stooq/`
+**`01_download_stooq.py`** (name kept for compatibility)
+- Downloads ticker lists from NASDAQ's public FTP:
+  - `nasdaqlisted.txt` — NASDAQ-listed symbols
+  - `otherlisted.txt` — NYSE, NYSEMKT, NYSEARCA, BATS symbols
+- Parses pipe-delimited format, filters test issues and special characters
+- Outputs unified `pipeline/raw/tickers.csv` with symbol, name, exchange, type
+- ~11,880 tickers total
 
-**`02_parse_stooq.py`**
-- Walks the Stooq directory tree: `data/daily/us/nasdaq stocks/`, `data/daily/us/nyse stocks/`, etc.
-- Stooq CSV format: `Date,Open,High,Low,Close,Volume` (Date is YYYYMMDD integer)
-- Parses each `.txt` file, converts to compact JSON array format
-- Outputs to `public/data/tickers/{SYMBOL}.json`
-- Ticker symbol extracted from filename (e.g., `aapl.us.txt` → `AAPL`)
-- Determines exchange from directory path
-
-**`03_fill_gaps_yfinance.py`**
-- Reads manifest of parsed Stooq tickers
-- For each ticker, checks if yfinance has more recent data
-- Appends any missing recent days
-- Rate-limited: ~0.2s delay between requests
-- Optional/skippable — Stooq data alone is sufficient for MVP
+**`02_parse_stooq.py`** (name kept for compatibility)
+- Reads ticker list from step 01
+- Downloads max historical OHLCV for each ticker via yfinance
+- Uses batch download (`yf.download()`) in groups of 50 for efficiency
+- Falls back to single-ticker download on batch errors
+- Saves progress to `pipeline/raw/download_progress.json` (resumable)
+- Outputs compact per-ticker JSON to `public/data/tickers/{SYMBOL}.json`
+- ~1 hour for full run, ~11,400 successful downloads (~500 fail — warrants/rights)
+- **Note**: Prices are split-adjusted (Yahoo Finance always returns split-adjusted OHLC)
 
 **`04_generate_manifest.py`**
 - Scans all generated ticker JSON files
-- For each: extracts symbol, date range, determines active/delisted
-- Attempts to get company name from yfinance (cached) or uses symbol as fallback
+- Reads names/exchanges from `pipeline/raw/tickers.csv`
+- Determines active/delisted by checking if last data is within 30 days
 - Outputs `public/data/manifest.json`
 
 **`run_pipeline.py`**
-- Runs steps in order, with progress logging
+- Runs steps 01, 02, 04 in order
+- Flags: `--skip-download` to reuse existing ticker list
 - Handles errors per-ticker gracefully (skip and continue)
 
 ### Step 7: Integration Testing
 1. Run pipeline: `cd pipeline && python run_pipeline.py`
-2. Verify output: check `public/data/manifest.json` exists and has entries, spot-check a few ticker JSONs
+2. Verify output: check `public/data/manifest.json` exists and has entries
 3. Run React dev server: `npm run dev`
-4. Test: search for AAPL, verify chart loads, toggle timeframes, search for a delisted ticker
+4. Test: search for AAPL, verify chart loads, toggle timeframes
 
 ## Data Format Details
 
@@ -166,21 +162,21 @@ export type Timeframe = 'daily' | 'weekly' | 'monthly';
   "symbol": "AAPL",
   "data": [
     [345427200, 0.51, 0.52, 0.49, 0.51, 117258400],
-    [345513600, 0.51, 0.53, 0.50, 0.52, 43971200],
-    ...
+    [345513600, 0.51, 0.53, 0.50, 0.52, 43971200]
   ]
 }
 ```
 Each row: `[unix_timestamp_seconds, open, high, low, close, volume]`
+Prices are split-adjusted (standard for financial charting).
 
-**manifest.json** (~500KB):
+**manifest.json** (~1.3MB):
 ```json
 {
   "tickers": [
-    {"s": "AAPL", "n": "Apple Inc", "e": "NASDAQ", "from": "1984-09-07", "to": "2026-02-07", "a": true},
-    {"s": "ENRNQ", "n": "Enron Corp", "e": "NYSE", "from": "1983-01-03", "to": "2007-03-26", "a": false}
+    {"s": "AAPL", "n": "Apple Inc. - Common Stock", "e": "NASDAQ", "from": "1980-12-12", "to": "2026-02-07", "a": true},
+    {"s": "NFLX", "n": "Netflix, Inc. - Common Stock", "e": "NASDAQ", "from": "2002-05-23", "to": "2026-02-07", "a": true}
   ],
-  "updated": "2026-02-07"
+  "updated": "2026-02-09"
 }
 ```
 
@@ -189,7 +185,11 @@ Each row: `[unix_timestamp_seconds, open, high, low, close, volume]`
 - **React**: 19.x
 - **Vite**: 6.x
 - **Tailwind CSS**: v4.x (using `@tailwindcss/vite` plugin)
-- **Python**: 3.10+ with pandas, yfinance, requests
+- **Python**: 3.9+ with pandas, yfinance, requests
+
+## Data Sources
+- **Ticker lists**: NASDAQ FTP (`nasdaqtrader.com/dynamic/SymDir/`)
+- **Historical OHLCV**: yfinance (Yahoo Finance, split-adjusted)
 
 ## Deployment (Future)
 - React app on Render static site (build: `npm run build`, publish: `dist/`)
@@ -197,9 +197,8 @@ Each row: `[unix_timestamp_seconds, open, high, low, close, volume]`
 - For now: local development only, `public/data/` is gitignored
 
 ## Verification
-1. `cd pipeline && python run_pipeline.py` — should produce `public/data/manifest.json` + `public/data/tickers/*.json`
+1. `cd pipeline && python run_pipeline.py` — produces `public/data/manifest.json` + `public/data/tickers/*.json`
 2. `npm run dev` — opens React app at localhost
 3. Search "AAPL" → chart loads with candlestick + volume data
 4. Toggle Weekly/Monthly → chart re-renders with aggregated data
-5. Search a delisted ticker → shows with "Delisted" badge
-6. Check mobile responsiveness (browser dev tools)
+5. Check StockInfo shows day change and all-time return

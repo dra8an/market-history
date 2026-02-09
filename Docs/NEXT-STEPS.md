@@ -1,13 +1,17 @@
 # Next Steps
 
 ## Immediate
-1. **Run the data pipeline** — `cd pipeline && python run_pipeline.py`
-   - Download Stooq ZIP (may require manual CAPTCHA download)
-   - Parse ~11,800 ticker CSVs into JSON
-   - Optionally fill gaps with yfinance
-   - Generate manifest.json
-2. **Integration testing** — `npm run dev` and verify search, chart rendering, timeframe toggling
+1. Deploy to Render or other static host
+2. Rename pipeline scripts to remove legacy "stooq" references
 
-## After Data + Testing
-3. Fetch company names via yfinance: `cd pipeline && python 04_generate_manifest.py --fetch-names`
-4. Deploy to Render or other static host
+## Enhancements
+3. Add technical indicators (SMA, EMA, RSI, MACD)
+4. Add date range picker for zooming into specific periods
+5. Add crosshair tooltip with OHLCV values
+6. Mobile-responsive layout improvements
+7. Add favorites/watchlist (localStorage)
+
+## Data Improvements
+8. Periodic data refresh pipeline (cron or manual re-run)
+9. Add delisted tickers via alternative data sources
+10. Compress JSON files (gzip) for faster loading

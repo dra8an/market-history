@@ -1,7 +1,7 @@
 # Master Document Index
 
 ## Project
-**Historical US Stock Data Viewer** — A static web app displaying historical OHLCV stock data for all US stocks and ETFs, including delisted tickers.
+**Historical US Stock Data Viewer** — A static web app displaying historical OHLCV stock data for all US stocks and ETFs (~11,400 tickers).
 
 ## Documentation Map
 
@@ -24,13 +24,19 @@
 | `src/utils/` | Utility functions (aggregation, formatting) |
 | `src/types/` | Shared TypeScript interfaces |
 | `pipeline/` | Python data pipeline scripts (runs locally) |
-| `pipeline/raw/` | Raw downloaded data from Stooq (gitignored) |
+| `pipeline/raw/` | Downloaded ticker lists and progress tracking (gitignored) |
 | `public/data/` | Generated JSON data files served by the app (gitignored) |
-| `public/data/tickers/` | Per-ticker OHLCV JSON files (~11,800 files) |
+| `public/data/tickers/` | Per-ticker OHLCV JSON files (~11,400 files, 1.7GB) |
 | `Docs/` | All project documentation |
 
 ## Generated Files (gitignored)
 
-- `public/data/manifest.json` — Ticker index (~500KB) used for search
-- `public/data/tickers/*.json` — Per-ticker OHLCV data files
-- `pipeline/raw/` — Raw Stooq bulk download data
+- `public/data/manifest.json` — Ticker index (1.3MB) used for search
+- `public/data/tickers/*.json` — Per-ticker split-adjusted OHLCV data files
+- `pipeline/raw/tickers.csv` — Unified ticker list from NASDAQ FTP
+- `pipeline/raw/download_progress.json` — Resumable download progress tracker
+
+## Data Sources
+
+- **Ticker lists**: NASDAQ FTP (`nasdaqtrader.com/dynamic/SymDir/`) — NASDAQ, NYSE, NYSEMKT, NYSEARCA
+- **Historical OHLCV**: yfinance (Yahoo Finance) — split-adjusted daily prices

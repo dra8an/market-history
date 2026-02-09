@@ -14,16 +14,16 @@
 ### Data Pipeline
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Python | 3.10+ | Pipeline scripting language |
-| pandas | latest | CSV parsing and data manipulation |
-| yfinance | latest | Gap-filling missing/recent data |
+| Python | 3.9+ | Pipeline scripting language |
+| pandas | latest | Data manipulation |
+| yfinance | latest | Historical OHLCV data download |
 | requests | latest | HTTP downloads |
 
 ### Data Sources
 | Source | What it provides |
 |--------|-----------------|
-| Stooq bulk download | Historical daily OHLCV for ~11,800 US stocks and ETFs |
-| yfinance | Recent data gap-filling, company names |
+| NASDAQ FTP | Ticker lists for NASDAQ, NYSE, NYSEMKT, NYSEARCA (~11,880 symbols) |
+| yfinance (Yahoo Finance) | Historical daily OHLCV data (split-adjusted) |
 
 ## Architecture Overview
 
@@ -66,7 +66,7 @@ Per-ticker data uses nested arrays instead of objects to minimize file size:
 This reduces file sizes by ~60% compared to named-key objects.
 
 ### Manifest for Search
-A single `manifest.json` file (~500KB) is loaded once on app startup. This provides instant client-side search without needing a search API. Contains symbol, name, exchange, date range, and active/delisted status for every ticker.
+A single `manifest.json` file (~1.3MB) is loaded once on app startup. This provides instant client-side search without needing a search API. Contains symbol, name, exchange, date range, and active/delisted status for every ticker.
 
 ### Lazy Loading
 Ticker data is fetched only when a user selects a ticker. An in-memory LRU cache (last ~50 tickers) prevents re-fetching on navigation back to previously viewed tickers.
@@ -77,13 +77,22 @@ Daily → Weekly/Monthly aggregation is done in the browser. This avoids needing
 ### AbortController for Rapid Switching
 When a user quickly switches between tickers, in-flight fetch requests are cancelled via AbortController to prevent stale data from appearing.
 
+### Split-Adjusted Prices
+All OHLCV data is split-adjusted, which is the standard for financial charting (used by TradingView, Yahoo Finance, etc.). This means:
+- Historical prices are retroactively divided by cumulative split factors
+- Charts show smooth price continuity across split dates
+- A stock that was $100 and split 2:1 would show $50 for all pre-split dates
+- The UI labels prices as "(split-adj.)" and shows both day change and all-time return
+
 ## Data Flow
 
-### Pipeline (offline, run locally)
+### Pipeline (offline, run locally, ~1 hour)
 ```
-Stooq ZIP → Extract → Parse CSVs → Per-ticker JSON files
-                                  → manifest.json
-                     yfinance → Gap-fill recent data
+NASDAQ FTP → Ticker lists (nasdaqlisted.txt, otherlisted.txt)
+           → Unified tickers.csv (~11,880 symbols)
+           → yfinance batch download (50 tickers/batch)
+           → Per-ticker JSON files (~11,400 files, 1.7GB)
+           → manifest.json (1.3MB)
 ```
 
 ### Runtime (in browser)

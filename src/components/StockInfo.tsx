@@ -5,10 +5,12 @@ interface StockInfoProps {
   ticker: ManifestTicker;
   lastClose: number | null;
   prevClose: number | null;
+  firstClose: number | null;
 }
 
-export function StockInfo({ ticker, lastClose, prevClose }: StockInfoProps) {
-  const change = lastClose != null && prevClose != null ? formatChange(lastClose, prevClose) : null;
+export function StockInfo({ ticker, lastClose, prevClose, firstClose }: StockInfoProps) {
+  const dayChange = lastClose != null && prevClose != null ? formatChange(lastClose, prevClose) : null;
+  const totalReturn = lastClose != null && firstClose != null && firstClose > 0 ? formatChange(lastClose, firstClose) : null;
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
@@ -26,11 +28,18 @@ export function StockInfo({ ticker, lastClose, prevClose }: StockInfoProps) {
         {formatDate(ticker.from)} — {formatDate(ticker.to)}
       </span>
       {lastClose != null && (
-        <span className="text-sm font-medium text-white">{formatPrice(lastClose)}</span>
+        <span className="text-sm font-medium text-white">
+          {formatPrice(lastClose)} <span className="text-xs text-gray-500">(split-adj.)</span>
+        </span>
       )}
-      {change && (
-        <span className={`text-xs ${change.positive ? 'text-green-400' : 'text-red-400'}`}>
-          {change.value} ({change.percent})
+      {dayChange && (
+        <span className={`text-xs ${dayChange.positive ? 'text-green-400' : 'text-red-400'}`}>
+          Day: {dayChange.value} ({dayChange.percent})
+        </span>
+      )}
+      {totalReturn && (
+        <span className={`text-xs ${totalReturn.positive ? 'text-green-400' : 'text-red-400'}`}>
+          All-time: {totalReturn.percent}
         </span>
       )}
     </div>

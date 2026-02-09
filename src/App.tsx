@@ -25,6 +25,11 @@ function App() {
     return tickerData.data[tickerData.data.length - 2][4];
   }, [tickerData]);
 
+  const firstClose = useMemo(() => {
+    if (!tickerData?.data.length) return null;
+    return tickerData.data[0][4];
+  }, [tickerData]);
+
   return (
     <div className="flex flex-col h-full">
       <header className="px-4 py-3 border-b border-gray-800 flex items-center gap-4">
@@ -34,7 +39,7 @@ function App() {
 
       {selectedTicker && (
         <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between gap-4 flex-wrap">
-          <StockInfo ticker={selectedTicker} lastClose={lastClose} prevClose={prevClose} />
+          <StockInfo ticker={selectedTicker} lastClose={lastClose} prevClose={prevClose} firstClose={firstClose} />
           <TimeframeSelector value={timeframe} onChange={setTimeframe} />
         </div>
       )}
