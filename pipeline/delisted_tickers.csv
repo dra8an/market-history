@@ -1,0 +1,99 @@
+symbol,name,exchange,type
+LEH,Lehman Brothers Holdings Inc.,NYSE,Stock
+ENE,Enron Corp.,NYSE,Stock
+BSC,Bear Stearns Companies Inc.,NYSE,Stock
+WCOM,WorldCom Inc.,NASDAQ,Stock
+WM,Washington Mutual Inc.,NYSE,Stock
+CPQ,Compaq Computer Corp.,NYSE,Stock
+RSH,RadioShack Corp.,NYSE,Stock
+BBI,Blockbuster Inc.,NYSE,Stock
+TOY,Toys R Us Inc.,NYSE,Stock
+EK,Eastman Kodak Co. (old),NYSE,Stock
+MER,Merrill Lynch & Co.,NYSE,Stock
+CFC,Countrywide Financial Corp.,NYSE,Stock
+WB,Wachovia Corp.,NYSE,Stock
+NT,Nortel Networks Corp.,NYSE,Stock
+SUNW,Sun Microsystems Inc.,NASDAQ,Stock
+PALM,Palm Inc.,NASDAQ,Stock
+SHLDQ,Sears Holdings Corp.,NASDAQ,Stock
+JCPNQ,J.C. Penney Co.,NYSE,Stock
+ABK,Ambac Financial Group Inc.,NYSE,Stock
+CIT,CIT Group Inc.,NYSE,Stock
+LEHMQ,Lehman Brothers Holdings (OTC),OTC,Stock
+ENRNQ,Enron Corp. (OTC),OTC,Stock
+WAMUQ,Washington Mutual (OTC),OTC,Stock
+MTLQQ,Motors Liquidation Co. (old GM),OTC,Stock
+BLIAQ,Blockbuster Inc. (OTC),OTC,Stock
+RSHCQ,RadioShack Corp. (OTC),OTC,Stock
+NRTLQ,Nortel Networks (OTC),OTC,Stock
+EKDKQ,Eastman Kodak (OTC),OTC,Stock
+NCC,National City Corp.,NYSE,Stock
+AW,Allied Waste Industries Inc.,NYSE,Stock
+BRL,Barr Pharmaceuticals Inc.,NYSE,Stock
+IMCL,ImClone Systems Inc.,NASDAQ,Stock
+FNM,Fannie Mae (old),NYSE,Stock
+FRE,Freddie Mac (old),NYSE,Stock
+FNMA,Fannie Mae (OTC),OTC,Stock
+FMCC,Freddie Mac (OTC),OTC,Stock
+HTZGQ,Hertz Global Holdings (OTC),OTC,Stock
+JAVA,Sun Microsystems Inc.,NASDAQ,Stock
+SGP,Schering-Plough Corp.,NYSE,Stock
+WYE,Wyeth,NYSE,Stock
+MBI,MBIA Inc.,NYSE,Stock
+TWX,Time Warner Inc.,NYSE,Stock
+S,Sprint Corp.,NYSE,Stock
+YHOO,Yahoo Inc.,NASDAQ,Stock
+MOT,Motorola Inc.,NYSE,Stock
+TYC,Tyco International,NYSE,Stock
+TWC,Time Warner Cable Inc.,NYSE,Stock
+GGP,General Growth Properties,NYSE,Stock
+CCTYQ,Countrywide Credit (OTC),OTC,Stock
+ABI,Anheuser-Busch InBev (old),NYSE,Stock
+UST,UST Inc.,NYSE,Stock
+ROH,Rohm and Haas Co.,NYSE,Stock
+GENZ,Genzyme Corp.,NASDAQ,Stock
+MIL,Millipore Corp.,NYSE,Stock
+NOVL,Novell Inc.,NASDAQ,Stock
+BMET,Biomet Inc.,NASDAQ,Stock
+PCS,MetroPCS Communications,NYSE,Stock
+CBR,CIBER Inc.,NYSE,Stock
+SPLS,Staples Inc.,NASDAQ,Stock
+RAD,Rite Aid Corp.,NYSE,Stock
+HTZ,Hertz Global Holdings,NYSE,Stock
+JCP,J.C. Penney Co.,NYSE,Stock
+SEARS,Sears Holdings Corp.,NASDAQ,Stock
+AN,AutoNation Inc. (old ticker),NYSE,Stock
+CC,Circuit City Stores Inc.,NYSE,Stock
+LCC,US Airways Group,NYSE,Stock
+DAL,Delta Air Lines (old pre-bankruptcy),NYSE,Stock
+AAMRQ,AMR Corp. (American Airlines),OTC,Stock
+ABKFQ,Ambac Financial (OTC),OTC,Stock
+LNR,Lennar Corp. Series B (old),NYSE,Stock
+KMT,Kmart Holdings Corp.,NASDAQ,Stock
+MWD,Morgan Stanley Dean Witter (old),NYSE,Stock
+PB,Prosperity Bancshares (old),NYSE,Stock
+AGN,Allergan Inc. (old),NYSE,Stock
+PCLN,Priceline Group Inc.,NASDAQ,Stock
+DTV,DirecTV Group Inc.,NASDAQ,Stock
+EMC,EMC Corp.,NYSE,Stock
+SNDK,SanDisk Corp.,NASDAQ,Stock
+ALTR,Altera Corp.,NASDAQ,Stock
+BRCM,Broadcom Corp. (old),NASDAQ,Stock
+LLTC,Linear Technology Corp.,NASDAQ,Stock
+MXIM,Maxim Integrated Products,NASDAQ,Stock
+XLNX,Xilinx Inc.,NASDAQ,Stock
+ATVI,Activision Blizzard Inc.,NASDAQ,Stock
+TWTR,Twitter Inc.,NYSE,Stock
+CTXS,Citrix Systems Inc.,NASDAQ,Stock
+FISV,First Data Corp. (old ticker),NASDAQ,Stock
+TIVO,TiVo Corp.,NASDAQ,Stock
+BBRY,BlackBerry Ltd. (old ticker),NASDAQ,Stock
+GMCR,Keurig Green Mountain Inc.,NASDAQ,Stock
+DELL,Dell Inc. (pre-buyout),NASDAQ,Stock
+SBUX,Lucent Technologies Inc.,NYSE,Stock
+LU,Lucent Technologies Inc.,NYSE,Stock
+MYL,Mylan N.V.,NASDAQ,Stock
+VAL,Valspar Corp.,NYSE,Stock
+GAS,AGL Resources Inc.,NYSE,Stock
+PLL,Pall Corp.,NYSE,Stock
+ACE,ACE Limited (now Chubb),NYSE,Stock
