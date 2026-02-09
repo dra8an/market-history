@@ -1,14 +1,20 @@
 import type { ManifestTicker } from '../types';
 import { formatDate, formatPrice, formatChange } from '../utils/format';
 
+interface RangeGain {
+  percent: string;
+  positive: boolean;
+}
+
 interface StockInfoProps {
   ticker: ManifestTicker;
   lastClose: number | null;
   prevClose: number | null;
   firstClose: number | null;
+  rangeGain?: RangeGain | null;
 }
 
-export function StockInfo({ ticker, lastClose, prevClose, firstClose }: StockInfoProps) {
+export function StockInfo({ ticker, lastClose, prevClose, firstClose, rangeGain }: StockInfoProps) {
   const dayChange = lastClose != null && prevClose != null ? formatChange(lastClose, prevClose) : null;
   const totalReturn = lastClose != null && firstClose != null && firstClose > 0 ? formatChange(lastClose, firstClose) : null;
 
@@ -40,6 +46,11 @@ export function StockInfo({ ticker, lastClose, prevClose, firstClose }: StockInf
       {totalReturn && (
         <span className={`text-xs ${totalReturn.positive ? 'text-green-400' : 'text-red-400'}`}>
           All-time: {totalReturn.percent}
+        </span>
+      )}
+      {rangeGain && (
+        <span className={`text-xs ${rangeGain.positive ? 'text-green-400' : 'text-red-400'}`}>
+          Range: {rangeGain.percent}
         </span>
       )}
     </div>

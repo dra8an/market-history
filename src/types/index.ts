@@ -18,3 +18,10 @@ export interface Manifest {
 }
 
 export type Timeframe = 'daily' | 'weekly' | 'monthly';
+
+export interface DateRange {
+  from: string; // YYYY-MM-DD
+  to: string;   // YYYY-MM-DD
+}
+
+export const COMPARISON_COLORS = ['#2196f3', '#ff9800', '#4caf50', '#ab47bc'];

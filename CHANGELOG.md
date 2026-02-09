@@ -19,8 +19,19 @@ All notable changes to this project will be documented in this file.
 - `App.tsx` — full layout wiring all components together
 - Python data pipeline: NASDAQ FTP ticker list download, yfinance batch OHLCV download, manifest generation
 - Resumable pipeline with progress tracking (download_progress.json)
+- **Multi-stock comparison** — compare up to 4 stocks on the same chart with percentage-normalized LineSeries
+- `useMultiTickerData` hook — 4 fixed `useTickerData` calls for parallel multi-ticker data loading
+- `DateRangePicker` component — preset buttons (1M/3M/6M/1Y/5Y/All) + custom date inputs
+- `ComparisonInfo` component — color-coded ticker list with prices, % gains, and remove buttons
+- `DateRange` interface and `COMPARISON_COLORS` constant in types
+- `dateRange.ts` utility — `filterByDateRange()` and `calculateGain()` functions
+- Dual-mode `StockChart` — single mode (candlestick + volume) and comparison mode (LineSeries with % normalization)
+- Date range gain display in `StockInfo` ("Range: +X.XX%")
 
 ### Changed
 - Replaced Stooq bulk download with NASDAQ FTP + yfinance (Stooq requires CAPTCHA)
 - StockInfo now shows labeled "Day:" change and "All-time:" return instead of unlabeled single change
 - Price display labeled as "(split-adj.)" since Yahoo Finance returns split-adjusted OHLC
+- `App.tsx` refactored from single `selectedTicker` state to array-based `tickers` state (max 4)
+- `SearchBar` accepts `selectedSymbols` and `maxReached` props — grays out already-selected tickers, disables input at 4
+- `StockChart` refactored to support mode switching with series lifecycle management (add/remove on mode change)

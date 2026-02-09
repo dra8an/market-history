@@ -7,9 +7,9 @@
 |------------|---------|---------|
 | React | 19.x | UI framework |
 | TypeScript | 5.x | Type safety |
-| Vite | 6.x | Build tool and dev server |
+| Vite | 7.x | Build tool and dev server |
 | Tailwind CSS | 4.x | Utility-first styling (via `@tailwindcss/vite` plugin) |
-| Lightweight Charts | 5.x | Candlestick and volume chart rendering |
+| Lightweight Charts | 5.x | Candlestick, volume, and line chart rendering |
 
 ### Data Pipeline
 | Technology | Version | Purpose |
@@ -28,25 +28,29 @@
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────┐
-│                  Static Web App                  │
-│                                                  │
-│  ┌──────────┐  ┌───────────┐  ┌──────────────┐  │
-│  │ SearchBar│→ │ StockInfo  │  │  Timeframe   │  │
-│  └──────────┘  └───────────┘  │  Selector    │  │
-│                               └──────────────┘  │
-│  ┌──────────────────────────────────────────┐   │
-│  │            StockChart                     │   │
-│  │    (Lightweight Charts candlestick +      │   │
-│  │     volume histogram)                     │   │
-│  └──────────────────────────────────────────┘   │
-│                                                  │
-│  Hooks: useManifest, useTickerData               │
-│  Utils: aggregation, format                      │
-└──────────────┬──────────────────┬────────────────┘
-               │ fetch once       │ fetch on demand
+┌──────────────────────────────────────────────────────────┐
+│                    Static Web App                         │
+│                                                           │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │ SearchBar│→ │ StockInfo /   │  │ TimeframeSelector│   │
+│  │ (max 4)  │  │ ComparisonInfo│  └──────────────────┘   │
+│  └──────────┘  └──────────────┘                          │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │              DateRangePicker                       │    │
+│  │    (1M/3M/6M/1Y/5Y/All presets + custom dates)   │    │
+│  └──────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │              StockChart (dual mode)                │    │
+│  │    Single: candlestick + volume histogram         │    │
+│  │    Comparison: LineSeries with % normalization    │    │
+│  └──────────────────────────────────────────────────┘    │
+│                                                           │
+│  Hooks: useManifest, useTickerData, useMultiTickerData    │
+│  Utils: aggregation, format, dateRange                    │
+└──────────────┬──────────────────┬─────────────────────────┘
+               │ fetch once       │ fetch on demand (up to 4)
                ▼                  ▼
-        manifest.json      tickers/AAPL.json
+        manifest.json      tickers/{SYMBOL}.json
         (ticker index)     (per-ticker OHLCV)
 ```
 
@@ -84,6 +88,19 @@ All OHLCV data is split-adjusted, which is the standard for financial charting (
 - A stock that was $100 and split 2:1 would show $50 for all pre-split dates
 - The UI labels prices as "(split-adj.)" and shows both day change and all-time return
 
+### Multi-Stock Comparison Mode
+When 2-4 stocks are selected, the chart switches from candlestick to LineSeries with percentage normalization. This is the standard approach used by TradingView, Google Finance, etc.:
+- Overlapping candlesticks are unreadable, so LineSeries is used instead
+- Percentage normalization (`((close - firstClose) / firstClose) * 100`) allows comparing stocks at different price levels
+- Each stock gets a distinct color from `COMPARISON_COLORS`
+- The price scale formatter shows `%` instead of dollar values
+
+### Fixed Hook Slots for Multi-Ticker
+`useMultiTickerData` calls `useTickerData` exactly 4 times (fixed slots) regardless of how many tickers are selected. This respects React's rules of hooks (no conditional hook calls) while reusing the existing LRU cache. Unused slots receive `null` and return no data.
+
+### Date Range Filtering
+Date range filtering is client-side using the already-fetched ticker data. No additional network requests are needed. The `DateRangePicker` uses native `<input type="date">` elements — no external date picker dependency.
+
 ## Data Flow
 
 ### Pipeline (offline, run locally, ~1 hour)
@@ -96,21 +113,48 @@ NASDAQ FTP → Ticker lists (nasdaqlisted.txt, otherlisted.txt)
 ```
 
 ### Runtime (in browser)
+
+**Single-stock mode:**
 ```
 App loads → fetch manifest.json → populate search index
 User searches → filter manifest client-side → show results
 User selects ticker → fetch tickers/{SYMBOL}.json → cache in memory
 User changes timeframe → aggregate cached daily data → re-render chart
+User selects date range → filter data client-side → re-render chart + recalculate gains
+```
+
+**Comparison mode (2-4 stocks):**
+```
+User selects 2nd ticker → fetch tickers/{SYMBOL}.json (if not cached)
+  → switch to comparison mode (LineSeries)
+  → normalize all datasets to % change from first close
+  → show ComparisonInfo with per-ticker color, price, and % gain
+User selects date range → filter all datasets → recalculate % gains per ticker
+User removes ticker → if back to 1, switch to single mode (candlestick)
 ```
 
 ## Chart Implementation
 - **Library**: TradingView Lightweight Charts v5
-- **Candlestick series**: OHLC data on primary price scale
-- **Volume series**: Histogram on secondary (overlay) price scale
+- **Single mode**: Candlestick series (OHLC) + Histogram series (volume) on separate price scales
+- **Comparison mode**: LineSeries per ticker with `%` price formatter, no volume
+- **Mode switching**: Series are removed and recreated when switching between single/comparison modes
+- **Series lifecycle**: Line series tracked in `useRef<Map<string, ISeriesApi<'Line'>>>`, diffed on update to add/remove only changed symbols
 - **Resize**: Handled via ResizeObserver for responsive layout
-- **Data format**: `{ time: 'YYYY-MM-DD', open, high, low, close }` for candlesticks
+- **Data format**: `{ time: 'YYYY-MM-DD', open, high, low, close }` for candlesticks, `{ time: 'YYYY-MM-DD', value }` for lines
+
+## Component Responsibilities
+
+| Component | Purpose |
+|-----------|---------|
+| `SearchBar` | Autocomplete search with multi-select support (max 4, grays out already-selected) |
+| `StockInfo` | Single-stock details: symbol, name, exchange, prices, day change, all-time return, range gain |
+| `ComparisonInfo` | Multi-stock view: color dots, symbols, prices, % gains, remove (x) buttons |
+| `StockChart` | Dual-mode chart: candlestick+volume (single) or normalized LineSeries (comparison) |
+| `DateRangePicker` | Preset buttons (1M/3M/6M/1Y/5Y/All) + two native date inputs |
+| `TimeframeSelector` | Daily/Weekly/Monthly toggle buttons |
 
 ## Styling Approach
 - Tailwind CSS v4 with the Vite plugin (`@tailwindcss/vite`)
 - Dark theme suitable for financial data viewing
 - Responsive layout — chart fills available space below header/controls
+- Comparison colors: `#2196f3` (blue), `#ff9800` (orange), `#4caf50` (green), `#ab47bc` (purple)

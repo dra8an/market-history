@@ -25,18 +25,22 @@ market-history-2/
 │   ├── main.tsx
 │   ├── index.css                # Global styles (Tailwind)
 │   ├── types/
-│   │   └── index.ts             # Shared TypeScript interfaces
+│   │   └── index.ts             # Shared TypeScript interfaces and constants
 │   ├── hooks/
 │   │   ├── useManifest.ts       # Load manifest.json once, provide search
-│   │   └── useTickerData.ts     # Lazy-fetch per-ticker JSON with caching
+│   │   ├── useTickerData.ts     # Lazy-fetch per-ticker JSON with caching
+│   │   └── useMultiTickerData.ts # 4 fixed useTickerData calls for comparison
 │   ├── utils/
 │   │   ├── aggregation.ts       # Daily → Weekly/Monthly OHLCV aggregation
-│   │   └── format.ts            # Number/date formatting helpers
+│   │   ├── format.ts            # Number/date formatting helpers
+│   │   └── dateRange.ts         # Date range filtering and gain calculation
 │   └── components/
-│       ├── SearchBar.tsx         # Autocomplete ticker search
-│       ├── StockChart.tsx        # Lightweight Charts candlestick + volume
+│       ├── SearchBar.tsx         # Autocomplete ticker search (multi-select, max 4)
+│       ├── StockChart.tsx        # Dual-mode: candlestick+volume or LineSeries comparison
 │       ├── TimeframeSelector.tsx # Daily/Weekly/Monthly toggle
-│       └── StockInfo.tsx         # Symbol, name, exchange, date range, changes
+│       ├── StockInfo.tsx         # Symbol, name, exchange, date range, changes, range gain
+│       ├── ComparisonInfo.tsx    # Color-coded multi-ticker list with gains and remove
+│       └── DateRangePicker.tsx   # Preset buttons + custom date inputs
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
@@ -73,12 +77,21 @@ export interface Manifest {
 }
 
 export type Timeframe = 'daily' | 'weekly' | 'monthly';
+
+export interface DateRange {
+  from: string; // YYYY-MM-DD
+  to: string;   // YYYY-MM-DD
+}
+
+export const COMPARISON_COLORS = ['#2196f3', '#ff9800', '#4caf50', '#ab47bc'];
 ```
 
 ### Step 3: Build Core Hooks
 **`useManifest.ts`** — Fetches `/data/manifest.json` once on app load. Provides a `search(query)` function that filters tickers by symbol/name prefix match. Memoized with useMemo.
 
 **`useTickerData.ts`** — Given a ticker symbol, fetches `/data/tickers/{SYMBOL}.json`. Uses AbortController for cancellation on rapid switching. Simple in-memory Map cache (keeps last ~50 tickers to avoid re-fetching).
+
+**`useMultiTickerData.ts`** — Calls `useTickerData` exactly 4 times (fixed slots) to support comparing up to 4 tickers while respecting React's rules of hooks. Returns `{ datasets: Map<string, TickerData>, loading, errors }`. Reuses the existing LRU cache.
 
 ### Step 4: Build Aggregation Utility (`src/utils/aggregation.ts`)
 - Takes daily OHLCV array, returns weekly or monthly aggregated array
@@ -92,13 +105,16 @@ export type Timeframe = 'daily' | 'weekly' | 'monthly';
 - Shows symbol, name, exchange, active/delisted badge
 - Debounced input (150ms)
 - Keyboard navigation (arrow keys + enter)
+- Multi-select: accepts `selectedSymbols` and `maxReached` props
+- Grays out already-selected tickers in dropdown, disables input at 4
 
 **`StockChart.tsx`**
-- Wraps Lightweight Charts v5
-- Creates chart with `createChart()`, adds candlestick series via `chart.addSeries(CandlestickSeries)`
-- Separate volume histogram series on secondary price scale
+- Wraps Lightweight Charts v5 with dual-mode rendering
+- **Single mode**: candlestick series + volume histogram (original behavior)
+- **Comparison mode**: LineSeries per ticker with percentage normalization (`((close - firstClose) / firstClose) * 100`)
+- Mode switching: removes and recreates series when mode changes
+- Line series tracked in `useRef<Map>`, diffed on update to add/remove only changed symbols
 - Handles resize via ResizeObserver
-- Updates data when ticker or timeframe changes
 
 **`TimeframeSelector.tsx`**
 - Three buttons: Daily | Weekly | Monthly
@@ -111,11 +127,26 @@ export type Timeframe = 'daily' | 'weekly' | 'monthly';
 - Split-adjusted price with label
 - Day change (last close vs previous close)
 - All-time return (first close vs last close)
+- Optional range gain ("Range: +X.XX%") when date range is active
+
+**`ComparisonInfo.tsx`**
+- Shown in comparison mode (2-4 tickers) instead of StockInfo
+- For each ticker: color dot, symbol, last close price, % gain, remove (x) button
+- Colors match the corresponding LineSeries on the chart
+
+**`DateRangePicker.tsx`**
+- Preset buttons: 1M, 3M, 6M, 1Y, 5Y, All
+- Two native `<input type="date">` with min/max constraints from ticker date ranges
+- "All" clears the date range (shows full history)
+- Presets calculate from the max date of selected tickers
 
 **`App.tsx`**
-- Layout: SearchBar at top, StockInfo + TimeframeSelector below, StockChart fills remaining space
-- State: selectedTicker, timeframe
-- Default: empty state with instructions
+- Layout: SearchBar at top, StockInfo/ComparisonInfo + TimeframeSelector, DateRangePicker, StockChart fills remaining space
+- State: `tickers: ManifestTicker[]` (max 4), `timeframe`, `dateRange: DateRange | null`
+- Mode derived: `tickers.length > 1 ? 'comparison' : 'single'`
+- Date range intersection computed across all selected tickers
+- Single mode: filters data by date range, shows candlestick chart
+- Comparison mode: filters all datasets, builds normalized comparison data
 
 ### Step 6: Python Data Pipeline
 
@@ -199,6 +230,14 @@ Prices are split-adjusted (standard for financial charting).
 ## Verification
 1. `cd pipeline && python run_pipeline.py` — produces `public/data/manifest.json` + `public/data/tickers/*.json`
 2. `npm run dev` — opens React app at localhost
-3. Search "AAPL" → chart loads with candlestick + volume data
+3. Search "AAPL" → candlestick chart loads (single mode, unchanged behavior)
 4. Toggle Weekly/Monthly → chart re-renders with aggregated data
 5. Check StockInfo shows day change and all-time return
+6. Search "MSFT" while AAPL shown → switches to line comparison, both normalized to %
+7. Add GOOGL, TSLA → 4 lines with distinct colors, gains shown per ticker
+8. Try adding 5th → search disabled ("Max 4 tickers selected")
+9. Remove a ticker via (x) → if back to 1, returns to candlestick mode
+10. Select "1Y" preset → chart zooms to last year, gains recalculate
+11. Set custom date range → chart and gains update
+12. Combine: 3 stocks + custom date range → all 3 show % gains for that range
+13. Toggle weekly/monthly → aggregation works in both modes

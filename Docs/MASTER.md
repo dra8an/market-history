@@ -1,7 +1,7 @@
 # Master Document Index
 
 ## Project
-**Historical US Stock Data Viewer** — A static web app displaying historical OHLCV stock data for all US stocks and ETFs (~11,400 tickers).
+**Historical US Stock Data Viewer** — A static web app displaying historical OHLCV stock data for all US stocks and ETFs (~11,400 tickers). Supports multi-stock comparison (up to 4) with percentage-normalized charts and custom date range filtering.
 
 ## Documentation Map
 
@@ -19,10 +19,10 @@
 | Path | Description |
 |------|-------------|
 | `src/` | React + TypeScript frontend source |
-| `src/components/` | UI components (SearchBar, StockChart, TimeframeSelector, StockInfo) |
-| `src/hooks/` | Custom React hooks (useManifest, useTickerData) |
-| `src/utils/` | Utility functions (aggregation, formatting) |
-| `src/types/` | Shared TypeScript interfaces |
+| `src/components/` | UI components (SearchBar, StockChart, StockInfo, ComparisonInfo, DateRangePicker, TimeframeSelector) |
+| `src/hooks/` | Custom React hooks (useManifest, useTickerData, useMultiTickerData) |
+| `src/utils/` | Utility functions (aggregation, formatting, dateRange) |
+| `src/types/` | Shared TypeScript interfaces and constants |
 | `pipeline/` | Python data pipeline scripts (runs locally) |
 | `pipeline/raw/` | Downloaded ticker lists and progress tracking (gitignored) |
 | `public/data/` | Generated JSON data files served by the app (gitignored) |
